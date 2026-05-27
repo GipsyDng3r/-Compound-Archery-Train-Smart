@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0d0d0d"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>Compound Archery — Train Smart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    html,body{margin:0;padding:0;background:#0a0a0a;min-height:100vh;}
+    #root{min-height:100vh;}
+    /* prevent iOS bounce */
+    body{overscroll-behavior:none;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+
+// ─── GLOBAL GLOSSARY OPENER ───────────────────────────────────────────────────
+let _openGlossary = null;
+const registerGlossary = (fn) => { _openGlossary = fn; };
+
+const GLOSSARY = {
+  blank_bale:{ term:"Blank Bale", phonetic:"blangk bayl", origin:"🇬🇧 Anglais", def:"Exercice où l'on tire sur une cible très proche (1–2 m) sans viser, pour se concentrer uniquement sur la gestuelle. Idéal pour développer l'automatisme musculaire et casser la panique de cible." },
+  scope:{ term:"Scope", phonetic:"skop", origin:"🇬🇧 Anglais", def:"Viseur circulaire à lentille grossissante monté sur l'arc à poulies de compétition. Il remplace le simple pin de visée et permet de voir le détail du blason à longue distance." },
+  float_control:{ term:"Float Control", phonetic:"flot kontrole", origin:"🇬🇧 Anglais", def:"Travail sur l'acceptation du mouvement naturel du scope. Plutôt que de figer le viseur (ce qui crée de la tension), on laisse le scope flotter et on déclenche dans ce mouvement." },
+  trispot:{ term:"Trispot", phonetic:"tri-spot", origin:"🇬🇧 Anglais", def:"Blason de compétition indoor comportant 3 zones de visée (triple face) en triangle. Utilisé à 18 m, il permet de tirer 3 flèches sur 3 cibles distinctes pour éviter d'endommager les flèches." },
+  punch:{ term:"Punch", phonetic:"peunche", origin:"🇬🇧 Anglais", def:"Défaut technique : appui brusque et anticipé sur le décocheur avant la fin de l'expansion. Le cerveau 'commande' la décoche trop tôt. Cause principale de flèches basses et de groupements dispersés." },
+  follow_through:{ term:"Follow-Through", phonetic:"folou-throo", origin:"🇬🇧 Anglais", def:"Continuation naturelle du mouvement après la décoche : la main de traction recule, le coude continue vers l'arrière, le bras d'arc avance. La flèche est encore sur la corde quand ce mouvement commence." },
+  draw_weight:{ term:"Draw Weight", phonetic:"dro wayt", origin:"🇬🇧 Anglais", def:"Puissance de l'arc en livres (lbs). Sur un arc à poulies, après le pic, le poids chute grâce aux cames (let-off). Un arc de 60 lbs avec 80% de let-off ne demande plus que 12 lbs à tenir en visée." },
+  tiller:{ term:"Tiller", phonetic:"tileur", origin:"🇬🇧 Anglais", def:"Distance en mm entre la base de chaque branche et la corde. Le tiller haut et bas doivent être identiques (Tiller A – Tiller B = 0) pour que les deux branches travaillent ensemble à l'armement et à la libération." },
+  draw_length:{ term:"Draw Length / Allonge", phonetic:"dro lenght", origin:"🇬🇧 Anglais", def:"Distance en pouces entre l'ancrage et la poignée à pleine allonge. Réglée via les modules des poulies. La norme internationale correspond à la distance corde–pivot + 1¾ pouce." },
+  cam_lean:{ term:"Cam Lean", phonetic:"kam lin", origin:"🇬🇧 Anglais", def:"Inclinaison latérale de la came par rapport à l'axe de l'arc. Se règle en vrillant le Yoke. Contrôle : plaquer une flèche contre le plat de la poulie, elle doit suivre parfaitement la corde." },
+  yoke:{ term:"Yoke", phonetic:"yok", origin:"🇬🇧 Anglais", def:"Câble en Y reliant la corde à la poulie des deux côtés. En vrillant un brin du Yoke, on modifie l'inclinaison de la came pour aligner la corde avec l'axe de l'arc." },
+  timing:{ term:"Timing / Synchro", phonetic:"tayming", origin:"🇬🇧 Anglais", def:"Synchronisation des deux poulies : elles doivent atteindre la butée câble au même moment. Poulie du haut en retard → torsader le buss cable. Poulie du bas en retard → torsader le control cable." },
+  arrow_rest:{ term:"Arrow Rest / Repose-Flèche", phonetic:"arou reste", origin:"🇬🇧 Anglais", def:"Dispositif fixé sur la fenêtre de l'arc qui supporte la flèche. Hauteur : le centre de la flèche doit passer devant le trou de fixation. La norme d'inclinaison de la lamelle est à 45°." },
+  center_shot:{ term:"Center Shot", phonetic:"senteur shot", origin:"🇬🇧 Anglais", def:"Réglage latéral du repose-flèche : distance en mm entre le centre de la flèche et l'axe de l'arc. La flèche doit être dans le plan de poussée de la corde (repérer le passage de la corde par rapport aux poulies)." },
+  nocking_point:{ term:"Nocking Point / Encochage", phonetic:"noking point", origin:"🇬🇧 Anglais", def:"Repère(s) sur la corde pour positionner la flèche. Hauteur de référence : à l'équerre (0°) avec le repose-flèche. Le détalonnage doit être réglé à 0 par rapport au tube (pas à l'encoche)." },
+  d_loop:{ term:"D-Loop", phonetic:"di-loop", origin:"🇬🇧 Anglais", def:"Petite boucle de cordelette nouée sur la corde, sur laquelle se fixe le décocheur. Elle centre l'effort, protège la corde et oriente correctement la visette à chaque armement. Longueur : 1,5 à 2 cm." },
+  peep_sight:{ term:"Peep Sight / Visette", phonetic:"pip sayt", origin:"🇬🇧 Anglais", def:"Anneau serti dans la corde, aligné avec l'œil. 2 types : neutre ou correctrice. La taille du trou (ex : 3/16\") détermine la précision vs la luminosité. L'angle du support (45° ou 37,5°) s'adapte à l'allonge." },
+  windage:{ term:"Windage / Latitude", phonetic:"windige", origin:"🇬🇧 Anglais", def:"Réglage latéral (gauche/droite) du viseur. Valeur positive = déplacement vers la droite. Joue sur la correction du torque résiduel et la dérive par le vent." },
+  elevation:{ term:"Élévation / Longitude", phonetic:"elévaychon", origin:"🇬🇧 Anglais", def:"Réglage vertical (haut/bas) du viseur. Varie avec la distance : plus la distance augmente, plus le viseur descend. La verticalité est optimisée par le poids de la stabilisation." },
+  ancrage:{ term:"Ancrage", phonetic:"", origin:"🇫🇷 Français technique", def:"Point de contact reproductible entre la main de traction et le visage à pleine allonge. Sur arc à poulies avec décocheur : généralement sous le maxillaire, corde au nez ou à la lèvre." },
+  decocheur:{ term:"Décocheur", phonetic:"release aid", origin:"🇫🇷 Français", def:"Dispositif mécanique tenu en main (ou fixé au poignet) qui s'accroche au D-loop. Élimine le torque digital, améliore la régularité. Pour un meilleur scopage, affiner l'angle du support de visette selon l'allonge." },
+  module:{ term:"Module (de poulie)", phonetic:"", origin:"🇫🇷 Français technique", def:"Pièce réglable fixée sur la came qui détermine l'allonge. Gradué en lettres ou en pouces. Travailler le plus proche possible de l'allonge maximale (mur plus franc, let-off plus confortable)." },
+  hold_drill:{ term:"Hold Drill", phonetic:"old dril", origin:"🇬🇧 Anglais", def:"Exercice de maintien en pleine allonge pendant 5–8 secondes avant de déclencher. Développe la stabilité musculaire, force l'expansion dorsale, et entraîne le mental à ne pas précipiter la décoche." },
+  let_off:{ term:"Let-Off", phonetic:"let-off", origin:"🇬🇧 Anglais", def:"Réduction de la puissance en fin d'armé grâce aux cames. La puissance recommandée au mur est entre 18 et 20 lbs. Let-off élevé (65-75%) = environ 15–17 lbs. Réglable via le tranche-fil du câble buss." },
+  expansion_dorsale:{ term:"Expansion Dorsale", phonetic:"", origin:"🇫🇷 Français technique", def:"Mouvement continu des muscles du dos (rhomboïdes, trapèzes) qui tire l'omoplate vers la colonne après l'ancrage. C'est ce mouvement qui déclenche naturellement la décoche — pas l'action des doigts." },
+  torque:{ term:"Torque", phonetic:"tork", origin:"🇬🇧 Anglais", def:"Rotation parasite transmise à la poignée. Si la main est trop crispée, la flèche dévie. La pression doit être uniquement dans le V du pouce. L'arc doit sauter droit vers l'avant après la décoche." },
+  sight_mark:{ term:"Sight Mark", phonetic:"sayt mark", origin:"🇬🇧 Anglais", def:"Valeur de réglage du viseur (élévation + windage) pour une distance donnée. Ces marques évoluent avec la corde, la météo, les flèches. À recalibrer après chaque changement de matériel." },
+  let_off2:{ term:"Mur", phonetic:"wall", origin:"🇫🇷 / 🇬🇧", def:"Point de fin d'armé où les cames arrivent en butée. Un bon mur est franc et net. La synchronisation des poulies et la longueur des câbles déterminent la qualité du mur." },
+  test_papier:{ term:"Test Papier", phonetic:"paper test", origin:"🇫🇷 Français technique", def:"Test de vol de flèche : on tire à 2 m à travers une feuille de papier. La déchirure montre l'orientation de la flèche. Pointe et plumes au même endroit = bon vol. Permet d'affiner l'encochage et le center shot." },
+  spine:{ term:"Spine (flèche)", phonetic:"spain", origin:"🇬🇧 Anglais", def:"Rigidité de la flèche. Pour un arc à poulies, choisir une flèche légèrement trop raide plutôt que trop souple. Longueur : couper au bord de la fenêtre de l'arc. Carbone = plus rapide, même sensation qu'en extérieur." },
+};
+
+function Term({ k, children }) {
+  if (!GLOSSARY[k]) return <>{children}</>;
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:"3px", cursor:"pointer" }}
+      onClick={e => { e.stopPropagation(); _openGlossary?.(k); }}>
+      <span style={{ borderBottom:"1px dotted #555", paddingBottom:"1px" }}>{children}</span>
+      <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:"14px", height:"14px", borderRadius:"50%", background:"rgba(249,115,22,0.15)", color:"#f97316", fontSize:"9px", fontWeight:"700", lineHeight:1, fontFamily:"'DM Sans',sans-serif" }}>ⓘ</span>
+    </span>
+  );
+}
+
+// ─── VIDEOS ───────────────────────────────────────────────────────────────────
+const VIDEOS = {
+  blank_bale:  { id:"iHVnAKgkXtM", title:"Blank Bale Training – Why & How", channel:"Triple Trouble Archery" },
+  expansion:   { id:"uAJHc0jSwGE", title:"The Best Back Tension Drill", channel:"Archery Strong" },
+  float:       { id:"shy-xYsXha8", title:"Micro Movement – The Secret to Back Tension", channel:"Archery & Bow" },
+  follow_thru: { id:"4gIsKl6pyjA", title:"Beginner's Guide to Shooting Compound Bow", channel:"NockOn Archery" },
+  hold_drill:  { id:"v3sgGIEKVp8", title:"Learn to Drive a Back Tension Release", channel:"NockOn with John Dudley" },
+  mental:      { id:"SdopwOCHe2A", title:"The ONE Thing ALL Top Archers Do", channel:"Archery Inspired" },
+  groupement:  { id:"7I5SCQA9C-U", title:"How To Use Back Tension in Archery", channel:"Archery & Fitness" },
+  sim:         { id:"CIVmFlYM6Mw", title:"3 Keys To Proper Blank Bale Practice", channel:"Online Archery Academy" },
+};
+
+// ─── FFTA HELP CONTENT ────────────────────────────────────────────────────────
+const FFTA_HELP = {
+  puissance: {
+    title: "Puissance — Guide FFTA",
+    icon: "💪",
+    sections: [
+      { heading: "Courbe puissance / allonge", body: "L'arc à poulies a un pic de puissance puis une chute grâce aux cames (let-off). La puissance au mur = puissance au pic − let-off (65 ou 75%). Un let-off élevé donne 15–17 lbs au mur, un faible let-off donne 22 lbs et plus." },
+      { heading: "Réglage du let-off", body: "Réglable via le tranche-fil du câble buss. Un tranche-fil épais (0,22–0,26) augmente la puissance au mur. Un tranche-fil fin (0,15–0,18) la diminue. La puissance recommandée est entre 18 et 20 lbs." },
+      { heading: "Modifier la puissance", body: "Vriller les câbles augmente la puissance. Dévriller diminue. Vriller la corde diminue la puissance. Ne pas dépasser ±½ pouce par rapport aux longueurs d'origine." },
+    ],
+  },
+  tiller: {
+    title: "Tiller — Guide FFTA",
+    icon: "⚖️",
+    sections: [
+      { heading: "Principe", body: "Tiller A (haut) et Tiller B (bas) doivent être égaux : Tiller A – Tiller B = 0. Les branches doivent travailler ensemble à l'armement ET à la libération." },
+      { heading: "Réglage", body: "Visser la branche en avance (tiller le plus fort). Dévisser la branche en retard (tiller le plus faible). Toujours régler en haut ET en bas, même nombre de tours." },
+      { heading: "Conséquence d'un mauvais tiller", body: "Un tiller déréglé déséquilibre les branches : mauvais mur, départ de flèche asymétrique, groupements dispersés verticalement." },
+    ],
+  },
+  allonge: {
+    title: "Allonge — Guide FFTA",
+    icon: "📏",
+    sections: [
+      { heading: "Norme internationale", body: "Distance entre la corde et le point de pivot de l'arc + 1¾ pouce. En position de tir : mesurer 1¾ pouce devant le milieu du trou de repose-flèche dans l'axe du pivot." },
+      { heading: "Poulies réglables", body: "Travailler le plus proche possible de l'allonge maximale : mur plus franc, distance plus importante entre pic et mur, let-off plus confortable. Modification par tranches de ½ pouce." },
+      { heading: "Modifier via les câbles", body: "Plus d'allonge → torsader les câbles ou détorsader la corde. Moins d'allonge → détorsader les câbles ou torsader la corde. Ne pas dépasser ±½ pouce de la longueur d'origine." },
+    ],
+  },
+  cam_lean: {
+    title: "Alignement Poulies — Guide FFTA",
+    icon: "🔄",
+    sections: [
+      { heading: "But", body: "Diminuer les oscillations de la corde en mettant les poulies dans l'axe de la corde. Un mauvais cam lean dévie la trajectoire et peut faire sortir la flèche du repose-flèche." },
+      { heading: "Contrôle", body: "Plaquer une flèche droite contre le plat de la poulie. Torsader le câble en V du côté vers lequel part la flèche par rapport à la corde." },
+      { heading: "Arc One Cam (monocame)", body: "Deux points visibles sur la came basse. Ils doivent s'aligner parallèlement à la corde. Le point haut doit dépasser la branche de 1 à 3 mm dans sa bonne position. Régler au ¼ de tour près." },
+    ],
+  },
+  synchro: {
+    title: "Synchro Poulies — Guide FFTA",
+    icon: "🎛️",
+    sections: [
+      { heading: "But", body: "Obtenir un mur franc à pleine allonge. Les poulies doivent travailler ensemble pendant l'armement et la libération. La corde doit être dans la gorge des deux poulies en même temps." },
+      { heading: "Réglage", body: "Poulie du haut en retard → torsader le buss cable (câble en V). Poulie du bas en retard → torsader le control cable. Vriller plutôt que dévriller." },
+      { heading: "Rodage", body: "Après tout réglage de câbles, rôder 100 à 150 flèches avant d'affiner. Les cordes et câbles neufs s'allongent au début. Attendre la stabilisation pour les réglages définitifs." },
+    ],
+  },
+  repose_fleche: {
+    title: "Repose-Flèche — Guide FFTA",
+    icon: "🪄",
+    sections: [
+      { heading: "Hauteur", body: "Le centre de la flèche doit passer devant le trou de fixation du repose-flèche (shooter point). Cela évite que les plumes ne touchent la poignée lors du départ." },
+      { heading: "Center shot (sortie de flèche)", body: "La flèche doit être dans le plan de poussée de la corde. Repérer le passage de la corde par rapport aux poulies. Rentrer ou sortir le repose-flèche pour aligner la flèche avec l'axe de la corde." },
+      { heading: "Inclinaison de la lamelle", body: "La norme est 45°. Si la lamelle est trop raide → baisser légèrement le repose-flèche. Si trop souple → monter légèrement. Lames : 008 (<325 gr), 010 (325–425 gr), 012 (>425 gr)." },
+      { heading: "Types de repose-flèche", body: "Effaçable (Dropaway) : simplification des réglages, portée flèche de 10 cm requise. À lame : plus fiable, moins de vis, importance de la souplesse. Les deux types sont utilisés en compétition haut niveau." },
+    ],
+  },
+  encochage: {
+    title: "Encochage & D-Loop — Guide FFTA",
+    icon: "🔗",
+    sections: [
+      { heading: "Détalonnage (hauteur)", body: "Régler à 0° par rapport au tube de la flèche (pas par rapport à l'encoche). But : limiter les oscillations verticales lors de la libération. Pour affiner : repère d'encochage légèrement plus large en bas qu'en haut." },
+      { heading: "D-Loop", body: "Sert à la prise de corde du décocheur. Permet que la zone de poussée soit à la verticale (pas d'angle). Assure l'orientation correcte de la visette à chaque armement. Longueur : 1,5 à 2 cm. Utiliser une corde renforcée FastFlight ou similaire." },
+      { heading: "Test papier", body: "Tirer à 2 m à travers une feuille de papier. Bon vol : pointe et plumes au même endroit. Encochage trop bas → monter le nocking point. Encochage trop haut → le descendre. Si le problème persiste, soupçonner une flèche trop souple." },
+    ],
+  },
+  visette: {
+    title: "Visette / Peep — Guide FFTA",
+    icon: "👁️",
+    sections: [
+      { heading: "But", body: "Obtenir une visette correctement orientée à chaque armement. Elle doit tomber parfaitement devant l'œil de visée, centrée dans le scope, sans avoir à bouger la tête." },
+      { heading: "Types", body: "Visette neutre ou correctrice. Taille du trou : plus petit = plus précis mais moins lumineux. Angle du support : 45° ou 37,5° selon l'allonge et l'angle de la corde à pleine allonge." },
+      { heading: "Verticalité de l'arc", body: "La bulle du scope doit être centrée à pleine allonge sans forcer. 3 options : sans latéral, avec latéral court/léger à ~90°, ou avec latéral moyen/long à moins de 45° avec poids. Arc équilibré = bruit sain + stable + contrôle." },
+    ],
+  },
+};
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const TECH_SHEETS = {
+  expansion:{ title:"Expansion Dorsale", icon:"🏹", tagline:"Imagine que ton coude veut continuer derrière toi après le départ.", good:["Continuer la traction après l'ancrage","Sentir l'omoplate se rapprocher de la colonne","Laisser la décoche arriver naturellement","Garder une tension continue dans le dos"], bad:["Coup de doigt","Main figée après la décoche","Épaule qui monte","Sensation uniquement dans le bras"] },
+  main_arc:{ title:"Main d'Arc Propre", icon:"🤚", tagline:"La main supporte l'arc, elle ne contrôle pas la trajectoire.", good:["Pression dans le V du pouce","Doigts détendus","Poignet neutre","Arc qui saute droit vers l'avant"], bad:["Serrer la poignée","Tourner la poignée au départ","Crispation de l'avant-bras","Torque latéral"] },
+  flottement:{ title:"Accepter le Flottement", icon:"🎯", tagline:"Le scope flotte naturellement. Le corps reste calme.", good:["Scope vivant mais calme","Expansion continue","Respiration fluide","Décoche surprise"], bad:["Figer le pin","Arracher le départ","Attendre le moment parfait","Forcer le jaune"] },
+  respiration:{ title:"Respiration", icon:"💨", tagline:"La respiration stabilise d'abord le cerveau, puis le viseur.", good:["Expiration lente à l'ancrage","Épaules basses","Rythme respiratoire naturel","Corps relâché"], bad:["Tirer en apnée","Blocage respiratoire violent","Tension nerveuse","Respiration hachée"] },
+  follow_through:{ title:"Follow-Through", icon:"➡️", tagline:"La flèche part au milieu du mouvement, pas à la fin.", good:["Main qui recule naturellement","Coude qui continue derrière","Arc qui avance","Tête stable"], bad:["Main qui saute","Regard qui fuit la cible","Épaule qui grimpe","Corps qui se fige"] },
+};
+
+const SESSIONS = [
+  { id:"18m_s1", label:"18m · Séance 1", sublabel:"Exécution & Régularité", badge:"INDOOR", color:"#f97316",
+    quote:"À 18m, le calme gagne souvent contre la force.",
+    steps:[
+      { id:"a", label:<><Term k="blank_bale">Échauffement Blank Bale</Term></>, desc:"Blank bale + élastique + 12 flèches lentes", video:"blank_bale" },
+      { id:"b", label:<><Term k="expansion_dorsale">Expansion Dorsale</Term></>, desc:"8 volées de 3 avec focus sur le dos", tech:"expansion", video:"expansion" },
+      { id:"c", label:<><Term k="float_control">Float Control</Term></>, desc:<>30 flèches en acceptant le mouvement du <Term k="scope">scope</Term></>, tech:"flottement", video:"float" },
+      { id:"d", label:<><Term k="trispot">Trispot</Term> Précision</>, desc:"10 volées comptées en rythme lent" },
+      { id:"e", label:"Finisher", desc:"3 volées parfaites uniquement" },
+    ],
+    good:["Décoche surprise",<><Term k="scope">Scope</Term> vivant mais calme</>,"Groupements serrés","Rythme identique"],
+    bad:["Forcer le jaune","Tir précipité","Tension dans l'avant-bras",<><Term k="punch">Punch</Term> du <Term k="decocheur">décocheur</Term></>],
+  },
+  { id:"18m_s2", label:"18m · Séance 2", sublabel:"Pression & Match Indoor", badge:"INDOOR", color:"#f97316",
+    quote:"Le trispot récompense les archers patients.",
+    steps:[
+      { id:"a", label:"Routine Compétition", desc:"Travail complet avec timing fixe", video:"sim" },
+      { id:"b", label:"Volées Match", desc:"12 volées de 3 en conditions compétition" },
+      { id:"c", label:"Reset Mental", desc:"Respiration et reset après chaque flèche", tech:"respiration", video:"mental" },
+      { id:"d", label:<><Term k="hold_drill">Hold Drill</Term></>, desc:"Tenue 6 secondes avant expansion", tech:"expansion", video:"hold_drill" },
+      { id:"e", label:"Bloc Fatigue", desc:"6 flèches rapides sous chrono" },
+    ],
+    good:["Mental stable","Bonne respiration","Routine identique","Confiance dans le mouvement"],
+    bad:["Obsession du score","Accélération du tir","Épaule qui monte","Perte du dos"],
+  },
+  { id:"50m_s1", label:"50m · Séance 1", sublabel:"Technique & Groupement", badge:"OUTDOOR", color:"#22c55e",
+    quote:"Tu construis une machine régulière, pas une flèche héroïque.",
+    steps:[
+      { id:"a", label:"Échauffement 30m", desc:"12 flèches à 30m en relâchement complet", video:"blank_bale" },
+      { id:"b", label:<><Term k="expansion_dorsale">Expansion Dorsale</Term></>, desc:"8 volées de 3 avec focus dos et traction continue", tech:"expansion", video:"expansion" },
+      { id:"c", label:"Main d'Arc", desc:"10 volées de 3 en doigts détendus", tech:"main_arc" },
+      { id:"d", label:"Groupement 50m", desc:"30 flèches sans regarder le score", tech:"flottement", video:"groupement" },
+      { id:"e", label:<><Term k="follow_through">Finisher Follow-Through</Term></>, desc:"6 flèches parfaites uniquement", tech:"follow_through", video:"follow_thru" },
+    ],
+    good:["Tension continue",<><Term k="scope">Scope</Term> calme</>,"Sortie fluide","Groupements cohérents"],
+    bad:["Tir précipité",<><Term k="punch">Punch</Term></>,"Épaule qui monte","Fatigue mentale"],
+  },
+  { id:"50m_s2", label:"50m · Séance 2", sublabel:"Pression & Compétition", badge:"OUTDOOR", color:"#22c55e",
+    quote:"Une erreur ne doit jamais devenir une série.",
+    steps:[
+      { id:"a", label:"Échauffement", desc:<><Term k="blank_bale">Blank bale</Term> puis 12 flèches à 30m</>, video:"blank_bale" },
+      { id:"b", label:<><Term k="float_control">Float & Flow</Term></>, desc:"30 flèches avec acceptation du flottement", tech:"flottement", video:"float" },
+      { id:"c", label:"Match Simulation", desc:"12 volées comptées comme en compétition", video:"sim" },
+      { id:"d", label:"Reset Mental", desc:"Après chaque flèche : respiration + reset", tech:"respiration", video:"mental" },
+      { id:"e", label:"Bloc Fatigue", desc:"6 flèches sous chrono, 45 secondes" },
+    ],
+    good:["Respiration calme","Routine stable","Bonne gestion émotionnelle",<><Term k="decocheur">Décoche</Term> propre malgré le stress</>],
+    bad:["Forcer le jaune","S'énerver après une erreur","Tir nerveux","Perte de rythme"],
+  },
+];
+
+const BOW_SETTINGS = [
+  { id:"puissance", step:"01", icon:"💪", titleEl:<><Term k="draw_weight">Puissance</Term></>, subtitle:"Draw Weight", ffta:"puissance",
+    tip:<>Desserrer / serrer les vis de branches du même nombre de tours en haut et en bas. <Term k="let_off">Let-off</Term> recommandé : 18–20 lbs au mur.</>,
+    fields:[{id:"poids_lb",label:"Poids (lbs)",placeholder:"ex : 55",unit:"lbs",type:"number"},{id:"tours_desserres",label:"Tours dévissés",placeholder:"ex : 3",unit:"tours",type:"number"},{id:"notes_puissance",label:"Notes",placeholder:"Ressenti, ajustements…",type:"textarea"}] },
+  { id:"tiller", step:"02", icon:"⚖️", titleEl:<><Term k="tiller">Tiller</Term></>, subtitle:"Équilibre des branches", ffta:"tiller",
+    tip:"Tiller A − Tiller B = 0. Visser la branche en avance, dévisser celle en retard.",
+    fields:[{id:"tiller_haut",label:"Tiller haut (mm)",placeholder:"ex : 173",unit:"mm",type:"number"},{id:"tiller_bas",label:"Tiller bas (mm)",placeholder:"ex : 173",unit:"mm",type:"number"},{id:"ecart_tiller",label:"Écart calculé",unit:"mm",type:"computed",compute:v=>{const h=parseFloat(v.tiller_haut),b=parseFloat(v.tiller_bas);return(!isNaN(h)&&!isNaN(b))?(Math.abs(h-b)).toFixed(1):"–";}}] },
+  { id:"allonge", step:"03", icon:"📏", titleEl:<><Term k="draw_length">Allonge</Term></>, subtitle:"Draw Length", ffta:"allonge",
+    tip:<>Régler via les <Term k="module">modules</Term> des poulies (haut ET bas). La norme = pivot + 1¾ pouce.</>,
+    fields:[{id:"allonge_pouces",label:"Allonge (pouces)",placeholder:'ex : 28.5',unit:'"',type:"number"},{id:"position_module",label:"Position module",placeholder:"ex : C / 28.5",type:"text"},{id:"notes_allonge",label:"Notes",placeholder:"Ressenti à l'ancrage…",type:"textarea"}] },
+  { id:"cam_lean", step:"04", icon:"🔄", titleEl:<><Term k="cam_lean">Alignement Poulies</Term></>, subtitle:"Cam Lean", ffta:"cam_lean",
+    tip:<>Plaquer une flèche contre le plat de la poulie côté <Term k="yoke">Yoke</Term>. Elle doit suivre parfaitement la corde.</>,
+    fields:[{id:"cam_lean_val",label:"État actuel",placeholder:"ex : aligné / +1mm haut",type:"text"},{id:"tours_yoke",label:"Correction Yoke",placeholder:"ex : +0.5 tour côté gauche",type:"text"},{id:"notes_cam",label:"Notes",placeholder:"Date du réglage, état corde…",type:"textarea"}] },
+  { id:"synchro", step:"05", icon:"🎛️", titleEl:<><Term k="timing">Synchro Poulies</Term></>, subtitle:"Timing", ffta:"synchro",
+    tip:"Les deux poulies doivent atteindre la butée simultanément. Vriller plutôt que dévriller.",
+    fields:[{id:"synchro_etat",label:"État actuel",placeholder:"ex : synchronisé / bas en retard",type:"text"},{id:"synchro_correction",label:"Correction",placeholder:"ex : +0.25 tour câble bas",type:"text"},{id:"notes_synchro",label:"Notes",placeholder:"Rôder 100–150 flèches avant d'affiner",type:"textarea"}] },
+  { id:"repose_fleche", step:"06", icon:"🪄", titleEl:<><Term k="arrow_rest">Repose-Flèche</Term></>, subtitle:"Arrow Rest", ffta:"repose_fleche",
+    tip:<>Hauteur : flèche passe devant le shooter point. <Term k="center_shot">Center shot</Term> : flèche dans l'axe de la corde. Lamelle inclinée à 45°.</>,
+    fields:[{id:"hauteur_repos",label:"Hauteur (mm)",placeholder:"ex : 12",unit:"mm",type:"number"},{id:"center_shot",labelEl:<><Term k="center_shot">Center shot</Term> (mm)</>,label:"Center shot (mm)",placeholder:"ex : 13",unit:"mm",type:"number"},{id:"type_repos",label:"Type de repose-flèche",placeholder:"ex : Dropaway / Lame fixe",type:"text"}] },
+  { id:"encochage", step:"07", icon:"🔗", titleEl:<><Term k="nocking_point">Encochage</Term> & <Term k="d_loop">D-Loop</Term></>, subtitle:"Nocking Point", ffta:"encochage",
+    tip:<>Détalonnage à 0° par rapport au tube. <Term k="d_loop">D-Loop</Term> : 1,5 à 2 cm. Faire un <Term k="test_papier">test papier</Term> pour affiner.</>,
+    fields:[{id:"hauteur_encoche",label:"Hauteur encoche (mm)",placeholder:"ex : 0 (à l'équerre)",unit:"mm",type:"number"},{id:"longueur_dloop",label:"Longueur D-Loop (mm)",placeholder:"ex : 18",unit:"mm",type:"number"},{id:"notes_encoche",label:"Notes",placeholder:"Type fil, état des nock sets…",type:"textarea"}] },
+  { id:"visette", step:"08", icon:"👁️", titleEl:<><Term k="peep_sight">Visette / Peep</Term></>, subtitle:"Peep Sight", ffta:"visette",
+    tip:<>Doit tomber devant l'œil sans forcer. Angle support : 45° ou 37,5° selon l'<Term k="draw_length">allonge</Term>. Ligatures en haut et en bas.</>,
+    fields:[{id:"hauteur_peep",label:"Hauteur peep (mm depuis encoche)",placeholder:"ex : 95",unit:"mm",type:"number"},{id:"taille_peep",label:'Diamètre peep (")',placeholder:'ex : 3/16',unit:'"',type:"text"},{id:"notes_peep",label:"Notes",placeholder:"Avec ou sans élastique, ligature…",type:"textarea"}] },
+];
+
+// ─── STYLES ───────────────────────────────────────────────────────────────────
+const styles = `
+
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0a0a0a;color:#e8e2d9;font-family:'DM Sans',sans-serif;min-height:100vh;}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;background:#0d0d0d;position:relative;overflow:hidden;padding-bottom:72px;}
+  .app::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(249,115,22,0.06) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  /* NAV */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(13,13,13,0.95);border-top:1px solid #1e1e1e;backdrop-filter:blur(12px);display:flex;z-index:50;}
+  .nav-btn{flex:1;padding:12px 0 14px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border:none;background:none;color:#444;transition:color 0.2s;}
+  .nav-btn.active{color:#f97316;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;}
+  /* HEADER */
+  .header{padding:48px 24px 32px;position:relative;z-index:1;}
+  .header-eyebrow{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:0.3em;color:#555;margin-bottom:8px;}
+  .header-title{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:0.9;letter-spacing:0.02em;color:#f0ebe3;}
+  .header-title span{color:#f97316;}
+  /* PICKER */
+  .picker{padding:0 24px 40px;position:relative;z-index:1;}
+  .picker-label{font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#444;margin-bottom:16px;}
+  .session-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .session-card{background:#161616;border:1px solid #222;border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s ease;position:relative;overflow:hidden;}
+  .session-card:hover{border-color:#333;transform:translateY(-1px);}
+  .session-card.active{border-color:var(--accent);background:#1a1a1a;}
+  .session-card.active::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top left,var(--accent-dim) 0%,transparent 70%);pointer-events:none;}
+  .sc-badge{display:inline-block;font-family:'Bebas Neue',sans-serif;font-size:9px;letter-spacing:0.2em;padding:2px 7px;border-radius:4px;margin-bottom:8px;background:var(--accent-dim);color:var(--accent);}
+  .sc-label{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1;color:#e8e2d9;margin-bottom:4px;}
+  .sc-sublabel{font-size:11px;font-weight:300;color:#555;line-height:1.3;}
+  .sc-check{position:absolute;top:12px;right:12px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;opacity:0;transition:opacity 0.2s;}
+  .session-card.active .sc-check{opacity:1;}
+  /* SESSION VIEW */
+  .session-view{padding:0 24px 80px;position:relative;z-index:1;animation:slideUp 0.3s ease;}
+  @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .session-header{margin-bottom:28px;}
+  .sh-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .sh-badge{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:0.2em;padding:3px 9px;border-radius:5px;background:var(--accent-dim);color:var(--accent);}
+  .sh-progress-text{font-size:11px;color:#555;margin-left:auto;}
+  .sh-title{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;margin-bottom:4px;}
+  .sh-sub{font-size:13px;font-weight:300;color:#666;}
+  .progress-bar{height:3px;background:#1e1e1e;border-radius:99px;margin-bottom:28px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+  .steps-list{display:flex;flex-direction:column;gap:10px;margin-bottom:28px;}
+  .step-item{background:#161616;border:1px solid #1e1e1e;border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.18s ease;position:relative;overflow:hidden;}
+  .step-item:hover{border-color:#2a2a2a;background:#181818;}
+  .step-item.done{border-color:var(--accent-dim2);background:#141414;}
+  .step-item.done::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:3px 0 0 3px;}
+  .step-check{width:26px;height:26px;border-radius:50%;border:1.5px solid #2e2e2e;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s ease;font-size:12px;background:#111;}
+  .step-item.done .step-check{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .step-content{flex:1;min-width:0;}
+  .step-title{font-size:14px;font-weight:500;color:#d4cfc9;margin-bottom:2px;}
+  .step-item.done .step-title{color:#666;text-decoration:line-through;text-decoration-color:#444;}
+  .step-desc{font-size:12px;font-weight:300;color:#4a4a4a;line-height:1.4;}
+  .step-item.done .step-desc{color:#363636;}
+  .step-actions{display:flex;gap:5px;flex-shrink:0;}
+  .step-action-btn{width:28px;height:28px;border-radius:8px;background:#1a1a1a;border:1px solid #252525;color:#555;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s ease;}
+  .step-action-btn:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+  .step-action-btn.video:hover{background:rgba(239,68,68,0.1);border-color:#ef4444;color:#ef4444;}
+  .check-section{margin-bottom:24px;}
+  .check-section-title{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.15em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .cst-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;}
+  .cst-dot.bad{background:#ef4444;}
+  .check-list{display:flex;flex-direction:column;gap:6px;}
+  .check-pill{background:#131313;border:1px solid #1c1c1c;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:300;color:#5a5a5a;display:flex;align-items:center;gap:8px;}
+  .check-pill.good{border-color:rgba(34,197,94,0.12);}
+  .check-pill.bad{border-color:rgba(239,68,68,0.1);}
+  .check-pill-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:#22c55e;}
+  .check-pill.bad .check-pill-dot{background:#ef4444;}
+  .quote-block{border-left:2px solid var(--accent);padding:10px 16px;margin-bottom:28px;background:rgba(255,255,255,0.02);border-radius:0 8px 8px 0;}
+  .quote-text{font-size:13px;font-weight:300;color:#777;font-style:italic;line-height:1.5;}
+  .completion-banner{background:linear-gradient(135deg,#1a2a1a,#141f14);border:1px solid rgba(34,197,94,0.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:24px;animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+  @keyframes popIn{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+  .cb-emoji{font-size:32px;margin-bottom:8px;}
+  .cb-title{font-family:'Bebas Neue',sans-serif;font-size:24px;color:#22c55e;letter-spacing:0.05em;}
+  .cb-sub{font-size:12px;color:#4a6a4a;margin-top:4px;}
+  .reset-btn{width:100%;padding:12px;border-radius:10px;background:transparent;border:1px solid #222;color:#444;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all 0.15s;letter-spacing:0.05em;}
+  .reset-btn:hover{border-color:#333;color:#666;}
+  /* VIDEO CARD */
+  .video-card{background:#0f1a22;border:1px solid #1e3040;border-radius:14px;overflow:hidden;margin-bottom:10px;}
+  .video-thumb-wrap{position:relative;cursor:pointer;}
+  .video-thumb{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;opacity:0.7;}
+  .video-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);}
+  .video-play-btn{width:48px;height:48px;border-radius:50%;background:rgba(239,68,68,0.9);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;box-shadow:0 4px 20px rgba(239,68,68,0.4);}
+  .video-meta{padding:10px 14px;}
+  .video-title{font-size:13px;font-weight:500;color:#d4cfc9;margin-bottom:3px;}
+  .video-channel{font-size:11px;color:#555;}
+  .video-link{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:#ef4444;letter-spacing:0.05em;text-decoration:none;padding:5px 12px;border:1px solid rgba(239,68,68,0.3);border-radius:6px;transition:all 0.15s;}
+  .video-link:hover{background:rgba(239,68,68,0.1);}
+  /* BOW SETTINGS */
+  .settings-page{padding:0 24px 40px;position:relative;z-index:1;animation:slideUp 0.3s ease;}
+  .settings-saved-bar{position:sticky;top:0;z-index:10;margin:0 -24px 20px;padding:10px 24px;background:rgba(34,197,94,0.1);border-bottom:1px solid rgba(34,197,94,0.2);font-size:12px;color:#22c55e;font-weight:500;display:flex;align-items:center;gap:8px;animation:slideDown 0.3s ease;}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .bow-card{background:#131313;border:1px solid #1e1e1e;border-radius:16px;margin-bottom:12px;overflow:hidden;transition:border-color 0.2s;}
+  .bow-card.has-data{border-color:#2a2a2a;}
+  .bow-card-header{padding:16px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
+  .bc-step{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:0.2em;color:#333;min-width:24px;}
+  .bc-icon{font-size:20px;flex-shrink:0;}
+  .bc-text{flex:1;}
+  .bc-title{font-family:'Bebas Neue',sans-serif;font-size:19px;line-height:1;color:#d4cfc9;}
+  .bc-subtitle{font-size:11px;font-weight:300;color:#444;}
+  .bc-status{width:20px;height:20px;border-radius:50%;border:1.5px solid #2a2a2a;display:flex;align-items:center;justify-content:center;font-size:10px;color:#333;flex-shrink:0;transition:all 0.2s;}
+  .bow-card.has-data .bc-status{background:#1a2a1a;border-color:rgba(34,197,94,0.4);color:#22c55e;}
+  .bc-help-btn{width:26px;height:26px;border-radius:8px;background:#1a1a1a;border:1px solid #252525;color:#555;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.15s;}
+  .bc-help-btn:hover{background:rgba(56,189,248,0.1);border-color:#38bdf8;color:#38bdf8;}
+  .bc-chevron{font-size:11px;color:#333;transition:transform 0.2s;flex-shrink:0;}
+  .bc-chevron.open{transform:rotate(180deg);}
+  .bow-card-body{padding:0 18px 18px;display:flex;flex-direction:column;gap:12px;}
+  .tip-block{background:#0d1f0d;border:1px solid rgba(34,197,94,0.1);border-radius:8px;padding:9px 12px;font-size:11px;font-weight:300;color:#4a6a4a;font-style:italic;line-height:1.5;display:flex;gap:8px;align-items:flex-start;}
+  .tip-icon{flex-shrink:0;font-size:12px;margin-top:1px;}
+  .field-group{display:flex;flex-direction:column;gap:4px;}
+  .field-label{font-size:11px;font-weight:500;letter-spacing:0.08em;color:#555;text-transform:uppercase;}
+  .field-row{position:relative;display:flex;align-items:center;}
+  .field-input{width:100%;background:#0d0d0d;border:1px solid #222;border-radius:8px;padding:10px 12px;color:#d4cfc9;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:300;outline:none;transition:border-color 0.15s;}
+  .field-input:focus{border-color:#3a3a3a;}
+  .field-input.with-unit{padding-right:44px;}
+  .field-unit{position:absolute;right:12px;font-size:11px;color:#444;font-weight:500;pointer-events:none;}
+  .field-textarea{width:100%;background:#0d0d0d;border:1px solid #222;border-radius:8px;padding:10px 12px;color:#d4cfc9;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:300;outline:none;transition:border-color 0.15s;resize:none;min-height:60px;}
+  .field-textarea:focus{border-color:#3a3a3a;}
+  .field-computed{width:100%;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:10px 12px;color:#22c55e;font-family:'Bebas Neue',sans-serif;font-size:18px;display:flex;align-items:center;justify-content:space-between;}
+  .field-computed-unit{font-size:12px;color:#2a5a2a;}
+  /* SIGHT MARKS */
+  .sight-page{padding:0 24px 40px;position:relative;z-index:1;animation:slideUp 0.3s ease;}
+  .sight-legend{background:#131313;border:1px solid #1e1e1e;border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;flex-direction:column;gap:6px;}
+  .sl-item{display:flex;align-items:center;gap:8px;}
+  .sl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .sl-text{font-size:12px;color:#666;}
+  .sl-text b{color:#aaa;font-weight:500;}
+  .sl-sub{font-size:11px;color:#3a3a3a;padding-top:4px;border-top:1px solid #1e1e1e;margin-top:2px;}
+  .sight-table-wrap{display:flex;flex-direction:column;gap:2px;margin-bottom:16px;}
+  .sight-table-head{display:grid;grid-template-columns:52px 1fr 1fr 1fr 28px;gap:6px;padding:6px 4px;font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:0.15em;color:#333;align-items:center;}
+  .sight-table-head small{font-family:'DM Sans',sans-serif;font-size:9px;letter-spacing:0;color:#2a2a2a;font-weight:300;}
+  .sight-row{display:grid;grid-template-columns:52px 1fr 1fr 1fr 28px;gap:6px;padding:10px 4px;background:#131313;border:1px solid #1a1a1a;border-radius:10px;align-items:center;cursor:pointer;transition:all 0.15s;min-height:48px;}
+  .sight-row:hover{border-color:#252525;background:#161616;}
+  .sight-row.filled{border-color:#1e2a1e;}
+  .sight-row.editing{border-color:#2a3a4a;background:#0f1a22;cursor:default;}
+  .st-dist{display:flex;align-items:center;justify-content:center;}
+  .dist-badge{font-family:'Bebas Neue',sans-serif;font-size:20px;line-height:1;color:#d4cfc9;display:flex;align-items:baseline;gap:2px;}
+  .dist-badge small{font-size:11px;color:#444;}
+  .st-val{display:flex;align-items:center;justify-content:center;}
+  .st-notes{display:flex;align-items:center;}
+  .st-del{display:flex;align-items:center;justify-content:center;}
+  .val-chip{font-family:'Bebas Neue',sans-serif;font-size:16px;color:#333;min-width:36px;text-align:center;line-height:1;transition:color 0.15s;}
+  .val-chip.blue.set{color:#38bdf8;}
+  .val-chip.orange.set{color:#f97316;}
+  .notes-text{font-size:10px;color:#3a3a3a;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .st-input{width:100%;background:#0a0a0a;border:1px solid #2a3a4a;border-radius:6px;padding:6px 8px;color:#e8e2d9;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;text-align:center;}
+  .st-input.dist-input{font-family:'Bebas Neue',sans-serif;font-size:16px;}
+  .st-input.notes-input{text-align:left;font-size:11px;}
+  .done-btn{width:24px;height:24px;border-radius:50%;background:#1a3a1a;border:1px solid rgba(34,197,94,0.3);color:#22c55e;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .del-btn{width:22px;height:22px;border-radius:50%;background:transparent;border:1px solid #222;color:#333;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+  .del-btn:hover{border-color:#4a2a2a;color:#ef4444;background:#1a0a0a;}
+  .add-dist-row{display:flex;gap:8px;margin-bottom:20px;}
+  .add-dist-input{flex:1;background:#131313;border:1px dashed #252525;border-radius:10px;padding:12px 16px;color:#888;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color 0.15s;}
+  .add-dist-input:focus{border-color:#3a3a3a;color:#d4cfc9;}
+  .add-dist-btn{width:46px;height:46px;border-radius:10px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+  .add-dist-btn:hover{background:#252525;color:#f97316;border-color:#f97316;}
+  .sight-chart-wrap{background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;padding:16px;margin-bottom:20px;}
+  .sc-title{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.15em;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .sc-title-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .sc-title-dot.blue{background:#38bdf8;}
+  .sc-title-dot.orange{background:#f97316;}
+  /* MODALS */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:flex;align-items:flex-end;backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal{background:#111;border:1px solid #222;border-radius:20px 20px 0 0;padding:28px 24px 48px;width:100%;max-height:82vh;overflow-y:auto;animation:slideModal 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+  @keyframes slideModal{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal-handle{width:36px;height:4px;background:#2e2e2e;border-radius:99px;margin:0 auto 24px;}
+  .modal-icon{font-size:36px;margin-bottom:12px;display:block;}
+  .modal-title{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;margin-bottom:6px;}
+  .modal-tagline{font-size:13px;font-weight:300;color:#666;font-style:italic;margin-bottom:24px;line-height:1.5;}
+  .modal-section{margin-bottom:20px;}
+  .modal-section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .msh-label{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.15em;}
+  .msh-label.good{color:#22c55e;}
+  .msh-label.bad{color:#ef4444;}
+  .modal-items{display:flex;flex-direction:column;gap:8px;}
+  .modal-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;font-weight:300;color:#888;line-height:1.4;padding:10px 14px;background:#161616;border-radius:10px;}
+  .mi-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .mi-dot.good{background:#22c55e;}
+  .mi-dot.bad{background:#ef4444;}
+  .modal-close{width:100%;padding:14px;border-radius:12px;background:#1e1e1e;border:1px solid #2a2a2a;color:#888;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;margin-top:24px;transition:all 0.15s;}
+  .modal-close:hover{background:#252525;color:#bbb;}
+  /* GLOSSARY MODAL */
+  .glos-modal{background:#0f0f0f;border:1px solid #252525;border-radius:20px 20px 0 0;padding:28px 24px 48px;width:100%;max-height:70vh;overflow-y:auto;animation:slideModal 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+  .glos-origin{display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#444;background:#1a1a1a;border-radius:5px;padding:3px 8px;margin-bottom:14px;}
+  .glos-term{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:1;color:#f0ebe3;margin-bottom:2px;}
+  .glos-phonetic{font-size:13px;color:#444;font-style:italic;margin-bottom:20px;}
+  .glos-def{font-size:14px;font-weight:300;color:#888;line-height:1.7;background:#141414;border-radius:12px;padding:16px;border:1px solid #1e1e1e;}
+  .glos-accent-bar{height:3px;width:48px;background:#f97316;border-radius:99px;margin-bottom:20px;}
+  /* FFTA HELP MODAL */
+  .ffta-modal{background:#0a0f14;border:1px solid #1e2a38;border-radius:20px 20px 0 0;padding:28px 24px 48px;width:100%;max-height:82vh;overflow-y:auto;animation:slideModal 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+  .ffta-badge{display:inline-block;font-family:'Bebas Neue',sans-serif;font-size:9px;letter-spacing:0.2em;padding:3px 9px;border-radius:5px;background:rgba(56,189,248,0.1);color:#38bdf8;margin-bottom:12px;}
+  .ffta-title{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;color:#e8e2d9;margin-bottom:4px;}
+  .ffta-accent{height:2px;width:36px;background:#38bdf8;border-radius:99px;margin-bottom:20px;}
+  .ffta-section{margin-bottom:16px;}
+  .ffta-heading{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:0.15em;color:#38bdf8;margin-bottom:8px;}
+  .ffta-body{font-size:13px;font-weight:300;color:#7a8a9a;line-height:1.7;background:#0d1620;border-radius:10px;padding:12px 14px;border:1px solid #1e2e3e;}
+`;
+
+// ─── BOW SETTINGS PAGE ────────────────────────────────────────────────────────
+function BowSettingsPage({ onFfta }) {
+  const [openCard, setOpenCard] = useState(null);
+  const [values, setValues] = useState({});
+  const [saved, setSaved] = useState(false);
+
+  const set=(cId,fId,v)=>{setValues(p=>({...p,[`${cId}_${fId}`]:v}));setSaved(false);};
+  const get=(cId,fId)=>values[`${cId}_${fId}`]||"";
+  const cardHasData=c=>c.fields.filter(f=>f.type!=="computed").some(f=>get(c.id,f.id).trim()!=="");
+
+  return (
+    <div className="settings-page">
+      {saved&&<div className="settings-saved-bar">✓ Réglages sauvegardés</div>}
+      {BOW_SETTINGS.map(card=>{
+        const isOpen=openCard===card.id;
+        const hasData=cardHasData(card);
+        return (
+          <div className={`bow-card ${hasData?"has-data":""}`} key={card.id}>
+            <div className="bow-card-header" onClick={()=>setOpenCard(isOpen?null:card.id)}>
+              <span className="bc-step">{card.step}</span>
+              <span className="bc-icon">{card.icon}</span>
+              <div className="bc-text"><div className="bc-title">{card.titleEl}</div><div className="bc-subtitle">{card.subtitle}</div></div>
+              <div className="bc-status">{hasData?"✓":""}</div>
+              {card.ffta&&<button className="bc-help-btn" onClick={e=>{e.stopPropagation();onFfta(card.ffta);}} title="Aide FFTA">?</button>}
+              <span className={`bc-chevron ${isOpen?"open":""}`}>▼</span>
+            </div>
+            {isOpen&&(
+              <div className="bow-card-body">
+                <div className="tip-block"><span className="tip-icon">💡</span><span>{card.tip}</span></div>
+                {card.fields.map(f=>(
+                  <div className="field-group" key={f.id}>
+                    <div className="field-label">{f.labelEl||f.label}</div>
+                    {f.type==="computed"?(
+                      <div className="field-computed"><span>{f.compute(Object.fromEntries(card.fields.map(ff=>[ff.id,get(card.id,ff.id)])))}</span><span className="field-computed-unit">{f.unit}</span></div>
+                    ):f.type==="textarea"?(
+                      <textarea className="field-textarea" placeholder={f.placeholder} value={get(card.id,f.id)} onChange={e=>set(card.id,f.id,e.target.value)} rows={2}/>
+                    ):(
+                      <div className="field-row">
+                        <input className={`field-input ${f.unit?"with-unit":""}`} type={f.type==="number"?"number":"text"} placeholder={f.placeholder} value={get(card.id,f.id)} onChange={e=>set(card.id,f.id,e.target.value)} inputMode={f.type==="number"?"decimal":"text"}/>
+                        {f.unit&&<span className="field-unit">{f.unit}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button style={{width:"100%",marginTop:8,padding:"14px",borderRadius:"12px",background:"#f97316",border:"none",color:"#fff",fontFamily:"'Bebas Neue',sans-serif",fontSize:"18px",letterSpacing:"0.1em",cursor:"pointer"}} onClick={()=>setSaved(true)}>
+        SAUVEGARDER MES RÉGLAGES
+      </button>
+    </div>
+  );
+}
+
+// ─── SIGHT MARKS PAGE ────────────────────────────────────────────────────────
+const DEFAULT_DISTANCES=[10,15,18,20,25,30,40,50,60,70];
+function SightMiniChart({rows,field,color}){
+  const valid=rows.filter(r=>r[field]&&!isNaN(parseFloat(r[field])));
+  if(valid.length<2)return null;
+  const W=320,H=80,PAD={l:36,r:10,t:8,b:20};
+  const iW=W-PAD.l-PAD.r,iH=H-PAD.t-PAD.b;
+  const xs=valid.map(r=>parseFloat(r.dist)),ys=valid.map(r=>parseFloat(r[field]));
+  const xMin=Math.min(...xs),xMax=Math.max(...xs),yMin=Math.min(...ys),yMax=Math.max(...ys),yRange=yMax-yMin||1;
+  const px=x=>PAD.l+((x-xMin)/(xMax-xMin||1))*iW;
+  const py=y=>PAD.t+iH-((y-yMin)/yRange)*iH;
+  const points=valid.map(r=>`${px(parseFloat(r.dist))},${py(parseFloat(r[field]))}`).join(" ");
+  return(
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H,overflow:"visible"}}>
+      {[0,0.5,1].map(t=>{const y=PAD.t+t*iH;return(<g key={t}><line x1={PAD.l} y1={y} x2={W-PAD.r} y2={y} stroke="#1e1e1e" strokeWidth="1"/><text x={PAD.l-4} y={y+3} textAnchor="end" fill="#444" fontSize="9">{(yMax-t*yRange).toFixed(1)}</text></g>);})}
+      {valid.map(r=>(<text key={r.id} x={px(parseFloat(r.dist))} y={H-4} textAnchor="middle" fill="#444" fontSize="9">{r.dist}m</text>))}
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
+      {valid.map(r=>(<circle key={r.id} cx={px(parseFloat(r.dist))} cy={py(parseFloat(r[field]))} r="3" fill={color}/>))}
+    </svg>
+  );
+}
+function SightMarksPage(){
+  const [rows,setRows]=useState(DEFAULT_DISTANCES.map(d=>({id:d,dist:String(d),elev:"",wind:"",notes:""})));
+  const [saved,setSaved]=useState(false);
+  const [editingId,setEditingId]=useState(null);
+  const [newDist,setNewDist]=useState("");
+  const update=(id,f,v)=>{setRows(p=>p.map(r=>r.id===id?{...r,[f]:v}:r));setSaved(false);};
+  const addRow=()=>{const d=newDist.trim();if(!d)return;const id=Date.now();setRows(p=>[...p,{id,dist:d,elev:"",wind:"",notes:""}].sort((a,b)=>parseFloat(a.dist)-parseFloat(b.dist)));setNewDist("");};
+  const removeRow=id=>{setRows(p=>p.filter(r=>r.id!==id));setSaved(false);};
+  const filledRows=rows.filter(r=>r.elev||r.wind);
+  return(
+    <div className="sight-page">
+      {saved&&<div className="settings-saved-bar">✓ Réglages viseur sauvegardés</div>}
+      <div className="sight-legend">
+        <div className="sl-item"><span className="sl-dot" style={{background:"#38bdf8"}}/><span className="sl-text"><b><Term k="elevation">Longitude</Term></b> = Élévation (haut / bas)</span></div>
+        <div className="sl-item"><span className="sl-dot" style={{background:"#f97316"}}/><span className="sl-text"><b><Term k="windage">Latitude</Term></b> = Windage (gauche / droite)</span></div>
+        <div className="sl-sub">Valeurs positives = vers le haut / droite. Cliquer sur une ligne pour éditer.</div>
+      </div>
+      <div className="sight-table-wrap">
+        <div className="sight-table-head">
+          <span className="st-dist">Dist.</span>
+          <span className="st-val blue"><Term k="elevation">Long.</Term><br/><small>Élév.</small></span>
+          <span className="st-val orange"><Term k="windage">Lat.</Term><br/><small>Wind.</small></span>
+          <span className="st-notes">Notes</span>
+          <span className="st-del"/>
+        </div>
+        {rows.map(row=>{
+          const isEditing=editingId===row.id,hasFull=row.elev||row.wind;
+          return(
+            <div key={row.id} className={`sight-row ${hasFull?"filled":""} ${isEditing?"editing":""}`} onClick={()=>!isEditing&&setEditingId(row.id)}>
+              <div className="st-dist">{isEditing?(<input className="st-input dist-input" value={row.dist} onChange={e=>update(row.id,"dist",e.target.value)} inputMode="decimal"/>):(<span className="dist-badge">{row.dist}<small>m</small></span>)}</div>
+              <div className="st-val blue">{isEditing?(<input className="st-input" placeholder="0.0" value={row.elev} onChange={e=>update(row.id,"elev",e.target.value)} inputMode="decimal" autoFocus/>):(<span className={`val-chip blue ${row.elev?"set":""}`}>{row.elev||"–"}</span>)}</div>
+              <div className="st-val orange">{isEditing?(<input className="st-input" placeholder="0.0" value={row.wind} onChange={e=>update(row.id,"wind",e.target.value)} inputMode="decimal"/>):(<span className={`val-chip orange ${row.wind?"set":""}`}>{row.wind||"–"}</span>)}</div>
+              <div className="st-notes">{isEditing?(<input className="st-input notes-input" placeholder="ex : intérieur…" value={row.notes} onChange={e=>update(row.id,"notes",e.target.value)}/>):(<span className="notes-text">{row.notes}</span>)}</div>
+              <div className="st-del">{isEditing?(<button className="done-btn" onClick={e=>{e.stopPropagation();setEditingId(null);}}>✓</button>):(<button className="del-btn" onClick={e=>{e.stopPropagation();removeRow(row.id);}}>✕</button>)}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="add-dist-row">
+        <input className="add-dist-input" placeholder="Ajouter une distance (m)" value={newDist} onChange={e=>setNewDist(e.target.value)} inputMode="decimal" onKeyDown={e=>e.key==="Enter"&&addRow()}/>
+        <button className="add-dist-btn" onClick={addRow}>+</button>
+      </div>
+      {filledRows.length>=2&&(<div className="sight-chart-wrap">
+        <div className="sc-title"><span className="sc-title-dot blue"/>Courbe élévation</div>
+        <SightMiniChart rows={filledRows} field="elev" color="#38bdf8"/>
+        {filledRows.some(r=>r.wind)&&(<><div className="sc-title" style={{marginTop:16}}><span className="sc-title-dot orange"/>Courbe windage</div><SightMiniChart rows={filledRows} field="wind" color="#f97316"/></>)}
+      </div>)}
+      <button style={{width:"100%",marginTop:20,padding:"14px",borderRadius:"12px",background:"#38bdf8",border:"none",color:"#0a0a0a",fontFamily:"'Bebas Neue',sans-serif",fontSize:"18px",letterSpacing:"0.1em",cursor:"pointer"}} onClick={()=>setSaved(true)}>SAUVEGARDER</button>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function App(){
+  const [page,setPage]=useState("train");
+  const [selectedSession,setSelectedSession]=useState(null);
+  const [checkedSteps,setCheckedSteps]=useState({});
+  const [techModal,setTechModal]=useState(null);
+  const [videoModal,setVideoModal]=useState(null);
+  const [glossaryKey,setGlossaryKey]=useState(null);
+  const [fftaKey,setFftaKey]=useState(null);
+
+  registerGlossary(setGlossaryKey);
+
+  const session=SESSIONS.find(s=>s.id===selectedSession);
+  const accent=session?session.color:"#f97316";
+  const accentDim=accent==="#f97316"?"rgba(249,115,22,0.1)":"rgba(34,197,94,0.1)";
+  const accentDim2=accent==="#f97316"?"rgba(249,115,22,0.05)":"rgba(34,197,94,0.05)";
+  const toggleStep=k=>setCheckedSteps(p=>({...p,[k]:!p[k]}));
+  const completedCount=session?session.steps.filter(s=>checkedSteps[`${selectedSession}_${s.id}`]).length:0;
+  const isComplete=session&&completedCount===session.steps.length;
+  const handleSelectSession=id=>{setSelectedSession(id);setCheckedSteps({});};
+  const techSheet=techModal?TECH_SHEETS[techModal]:null;
+  const vidData=videoModal?VIDEOS[videoModal]:null;
+  const glossaryEntry=glossaryKey?GLOSSARY[glossaryKey]:null;
+  const fftaData=fftaKey?FFTA_HELP[fftaKey]:null;
+
+  const closeAll=()=>{setTechModal(null);setVideoModal(null);setGlossaryKey(null);setFftaKey(null);};
+
+  return(
+    <>
+      <style>{styles}</style>
+      <div className="app" style={{"--accent":accent,"--accent-dim":accentDim,"--accent-dim2":accentDim2}}>
+        {/* HEADER */}
+        <div className="header">
+          <p className="header-eyebrow">COMPOUND ARCHERY</p>
+          <h1 className="header-title">
+            {page==="train"?<><span>TRAIN</span><br/>SMART</>:page==="settings"?<>MON<br/><span>ARC</span></>:<>VISEUR<br/><span>MARKS</span></>}
+          </h1>
+        </div>
+
+        {/* TRAINING PAGE */}
+        {page==="train"&&(
+          <>
+            <div className="picker">
+              <p className="picker-label">Choisir ma séance</p>
+              <div className="session-grid">
+                {SESSIONS.map(s=>(
+                  <div key={s.id} className={`session-card ${selectedSession===s.id?"active":""}`} style={{"--accent":s.color,"--accent-dim":s.color==="#f97316"?"rgba(249,115,22,0.1)":"rgba(34,197,94,0.1)"}} onClick={()=>handleSelectSession(s.id)}>
+                    <div className="sc-badge">{s.badge}</div><div className="sc-label">{s.label}</div><div className="sc-sublabel">{s.sublabel}</div><div className="sc-check">✓</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {session&&(
+              <div className="session-view" key={selectedSession}>
+                <div className="session-header">
+                  <div className="sh-meta"><span className="sh-badge">{session.badge}</span><span className="sh-progress-text">{completedCount} / {session.steps.length} exercices</span></div>
+                  <div className="sh-title">{session.sublabel}</div><div className="sh-sub">{session.label}</div>
+                </div>
+                <div className="progress-bar"><div className="progress-fill" style={{width:`${(completedCount/session.steps.length)*100}%`}}/></div>
+                {isComplete&&(<div className="completion-banner"><div className="cb-emoji">🎯</div><div className="cb-title">Séance terminée !</div><div className="cb-sub">{session.quote}</div></div>)}
+                <div className="quote-block"><p className="quote-text">"{session.quote}"</p></div>
+                <div className="steps-list">
+                  {session.steps.map(step=>{
+                    const key=`${selectedSession}_${step.id}`;
+                    const done=!!checkedSteps[key];
+                    return(
+                      <div key={step.id} className={`step-item ${done?"done":""}`} onClick={()=>toggleStep(key)}>
+                        <div className="step-check">{done?"✓":""}</div>
+                        <div className="step-content"><div className="step-title">{step.label}</div><div className="step-desc">{step.desc}</div></div>
+                        <div className="step-actions">
+                          {step.video&&(<button className="step-action-btn video" onClick={e=>{e.stopPropagation();setVideoModal(step.video);}} title="Voir vidéo">▶</button>)}
+                          {step.tech&&(<button className="step-action-btn" onClick={e=>{e.stopPropagation();setTechModal(step.tech);}} title="Fiche technique">📋</button>)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="check-section">
+                  <div className="check-section-title"><span className="cst-dot"/>Signes que c'est BON</div>
+                  <div className="check-list">{session.good.map((g,i)=>(<div className="check-pill good" key={i}><span className="check-pill-dot"/>{g}</div>))}</div>
+                </div>
+                <div className="check-section">
+                  <div className="check-section-title"><span className="cst-dot bad"/>Signes que c'est MAUVAIS</div>
+                  <div className="check-list">{session.bad.map((b,i)=>(<div className="check-pill bad" key={i}><span className="check-pill-dot"/>{b}</div>))}</div>
+                </div>
+                <button className="reset-btn" onClick={()=>setCheckedSteps({})}>RÉINITIALISER LA SÉANCE</button>
+              </div>
+            )}
+          </>
+        )}
+
+        {page==="settings"&&<BowSettingsPage onFfta={setFftaKey}/>}
+        {page==="sight"&&<SightMarksPage/>}
+
+        {/* BOTTOM NAV */}
+        <div className="bottom-nav">
+          <button className={`nav-btn ${page==="train"?"active":""}`} onClick={()=>setPage("train")}><span className="nav-icon">🏹</span><span className="nav-label">Entraînement</span></button>
+          <button className={`nav-btn ${page==="sight"?"active":""}`} onClick={()=>setPage("sight")}><span className="nav-icon">🔭</span><span className="nav-label">Viseur</span></button>
+          <button className={`nav-btn ${page==="settings"?"active":""}`} onClick={()=>setPage("settings")}><span className="nav-icon">⚙️</span><span className="nav-label">Mon Arc</span></button>
+        </div>
+
+        {/* ── MODALS ── */}
+
+        {/* VIDEO MODAL */}
+        {vidData&&(
+          <div className="modal-overlay" onClick={closeAll}>
+            <div className="modal" onClick={e=>e.stopPropagation()}>
+              <div className="modal-handle"/>
+              <div className="video-card">
+                <a href={`https://www.youtube.com/watch?v=${vidData.id}`} target="_blank" rel="noopener noreferrer" className="video-thumb-wrap" onClick={e=>e.stopPropagation()}>
+                  <img className="video-thumb" src={`https://img.youtube.com/vi/${vidData.id}/mqdefault.jpg`} alt={vidData.title} loading="lazy"/>
+                  <div className="video-play-overlay"><div className="video-play-btn">▶</div></div>
+                </a>
+                <div className="video-meta">
+                  <div className="video-title">{vidData.title}</div>
+                  <div className="video-channel">📺 {vidData.channel}</div>
+                  <a className="video-link" href={`https://www.youtube.com/watch?v=${vidData.id}`} target="_blank" rel="noopener noreferrer">VOIR SUR YOUTUBE →</a>
+                </div>
+              </div>
+              <button className="modal-close" onClick={closeAll}>Fermer</button>
+            </div>
+          </div>
+        )}
+
+        {/* TECH SHEET MODAL */}
+        {techSheet&&(
+          <div className="modal-overlay" onClick={closeAll}>
+            <div className="modal" onClick={e=>e.stopPropagation()}>
+              <div className="modal-handle"/>
+              <span className="modal-icon">{techSheet.icon}</span>
+              <div className="modal-title">{techSheet.title}</div>
+              <div className="modal-tagline">"{techSheet.tagline}"</div>
+              <div className="modal-section"><div className="modal-section-header"><span className="msh-label good">✓ Signes que c'est BON</span></div><div className="modal-items">{techSheet.good.map((g,i)=><div className="modal-item" key={i}><span className="mi-dot good"/>{g}</div>)}</div></div>
+              <div className="modal-section"><div className="modal-section-header"><span className="msh-label bad">✗ Signes que c'est MAUVAIS</span></div><div className="modal-items">{techSheet.bad.map((b,i)=><div className="modal-item" key={i}><span className="mi-dot bad"/>{b}</div>)}</div></div>
+              <button className="modal-close" onClick={closeAll}>Fermer</button>
+            </div>
+          </div>
+        )}
+
+        {/* GLOSSARY MODAL */}
+        {glossaryEntry&&(
+          <div className="modal-overlay" onClick={closeAll}>
+            <div className="glos-modal" onClick={e=>e.stopPropagation()}>
+              <div className="modal-handle"/>
+              <div className="glos-origin">{glossaryEntry.origin}</div>
+              <div className="glos-term">{glossaryEntry.term}</div>
+              {glossaryEntry.phonetic&&<div className="glos-phonetic">/{glossaryEntry.phonetic}/</div>}
+              <div className="glos-accent-bar"/>
+              <div className="glos-def">{glossaryEntry.def}</div>
+              <button className="modal-close" style={{marginTop:20}} onClick={closeAll}>Fermer</button>
+            </div>
+          </div>
+        )}
+
+        {/* FFTA HELP MODAL */}
+        {fftaData&&(
+          <div className="modal-overlay" onClick={closeAll}>
+            <div className="ffta-modal" onClick={e=>e.stopPropagation()}>
+              <div className="modal-handle"/>
+              <div className="ffta-badge">GUIDE FFTA — ARC À POULIES</div>
+              <div className="ffta-title">{fftaData.title}</div>
+              <div className="ffta-accent"/>
+              {fftaData.sections.map((s,i)=>(
+                <div className="ffta-section" key={i}>
+                  <div className="ffta-heading">{s.heading}</div>
+                  <div className="ffta-body">{s.body}</div>
+                </div>
+              ))}
+              <button className="modal-close" onClick={closeAll}>Fermer</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
